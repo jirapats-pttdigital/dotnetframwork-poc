@@ -1,0 +1,21 @@
+name: "Deploy Hotfix"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  Validate-Jobs:
+    runs-on: ${{ VARS.RUNS_ON_SELF_HOST }}
+    environment: uat
+    steps:
+      - run: echo "Validate Jobs"
+
+  Owasp-Zap:
+    needs: ["Validate-Jobs"]
+    uses: PTTGC-DevSecOps/global-pipeline/.github/workflows/DAST_Owasp_Zap.yml@main
+    with:
+      allow_failure: ${{ fromJSON(VARS.ALLOW_FAILURE_DAST_OWASP_ZAP) }}
+      runs_on_host: ${{ VARS.RUNS_ON_SELF_HOST }}
+      hostname: ${{ VARS.QAS_HOSTNAME }}
+      protocol: ${{ VARS.QAS_PROTOCOL == null && 'https' || VARS.QAS_PROTOCOL }}
+    secrets: inherit

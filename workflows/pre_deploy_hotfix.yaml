@@ -1,0 +1,51 @@
+name: "Pre Deploy Hotfix (Security)"
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["hotfix"]
+
+jobs:
+  Validate-Jobs:
+    runs-on: ${{ VARS.RUNS_ON_SELF_HOST }}
+    environment: hotfix
+    steps:
+      - run: echo "Validate Jobs"
+
+  Checkout-Code:
+    needs: ["Validate-Jobs"]
+    uses: PTTGC-DevSecOps/global-pipeline/.github/workflows/Checkout_Code.yml@main
+    with:
+      runs_on_host: ${{ VARS.RUNS_ON_SELF_HOST }}
+
+  Quality-Analysis-Sonar-Qube:
+    needs: ["Checkout-Code"]
+    uses: PTTGC-DevSecOps/global-pipeline/.github/workflows/Quality_Analysis_Sonar_Qube.yml@main
+    with:
+      allow_failure: ${{ fromJSON(VARS.ALLOW_FAILURE_QUALITY_CODE_SCAN) }}
+      runs_on_host: ${{ VARS.RUNS_ON_SELF_HOST }}
+      app_language: ${{ VARS.APP_LANGUAGE }}
+      language_version: ${{ VARS.LANGUAGE_VERSION }}
+      sonar_properties_file_path: ${{ VARS.SONAR_PROPERTIES_FILE_PATH }}
+    secrets: inherit
+
+  SAST-Coverity:
+    needs: ["Checkout-Code"]
+    uses: PTTGC-DevSecOps/global-pipeline/.github/workflows/SAST_Coverity.yml@main
+    with:
+      allow_failure: ${{ fromJSON(VARS.ALLOW_FAILURE_SAST_COVERITY) }}
+      runs_on_host: ${{ VARS.RUNS_ON_SELF_HOST }}
+      app_language: ${{ VARS.APP_LANGUAGE }}
+      language_version: ${{ VARS.LANGUAGE_VERSION }}
+      build_command: ${{ VARS.BUILD_COMMAND }}
+    secrets: inherit
+
+  SCA-Blackduck:
+    needs: ["Checkout-Code"]
+    uses: PTTGC-DevSecOps/global-pipeline/.github/workflows/SCA_Blackduck.yml@main
+    with:
+      allow_failure: ${{ fromJSON(VARS.ALLOW_FAILURE_SCA_BLACK_DUCK) }}
+      runs_on_host: ${{ VARS.RUNS_ON_SELF_HOST }}
+      app_language: ${{ VARS.APP_LANGUAGE }}
+      language_version: ${{ VARS.LANGUAGE_VERSION }}
+    secrets: inherit

@@ -1,0 +1,69 @@
+name: "Develop"
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+
+jobs:
+  Validate-Jobs:
+    runs-on: GRP-COVERIT-P02
+    environment: dev
+    steps:
+      - run: echo "Validate Jobs"
+
+  Checkout-Code:
+    needs: ["Validate-Jobs"]
+    uses: PTTGC-DevSecOps/global-pipeline/.github/workflows/Checkout_Code.yml@runonwindows
+    with:
+      runs_on_host: GRP-COVERIT-P02
+
+  # Quality-Analysis-Sonar-Qube:
+  #   needs: ["Checkout-Code"]
+  #   uses: PTTGC-DevSecOps/global-pipeline/.github/workflows/Quality_Analysis_Sonar_Qube.yml@main
+  #   with:
+  #     allow_failure: ${{ fromJSON(VARS.ALLOW_FAILURE_QUALITY_CODE_SCAN) }}
+  #     runs_on_host: GRP-COVERIT-P02
+  #     app_language: ${{ VARS.APP_LANGUAGE }}
+  #     language_version: ${{ VARS.LANGUAGE_VERSION }}
+  #     sonar_properties_file_path: ${{ VARS.SONAR_PROPERTIES_FILE_PATH }}
+  #   secrets: inherit
+
+  SAST-Coverity:
+    needs: ["Checkout-Code"]
+    uses: PTTGC-DevSecOps/global-pipeline/.github/workflows/SAST_Coverity.yml@runonwindows
+    with:
+      allow_failure: true
+      runs_on_host: GRP-COVERIT-P02
+      app_language: dotnet
+      language_version: 1
+      build_command: dotnet build
+    secrets: inherit
+
+  SCA-Blackduck:
+    needs: ["Checkout-Code"]
+    uses: PTTGC-DevSecOps/global-pipeline/.github/workflows/SCA_Blackduck.yml@main
+    with:
+      allow_failure: true
+      runs_on_host: GRP-COVERIT-P02
+      app_language: dotnet
+      language_version: 1
+    secrets: inherit
+
+  # Start-QAS:
+  #   needs: ["Quality-Analysis-Sonar-Qube","SAST-Coverity","SCA-Blackduck"]
+  #   uses: PTTGC-DevSecOps/global-pipeline/.github/workflows/Manual_Start.yml@main
+  #   with:
+  #     runs_on_host: GRP-COVERIT-P02
+  #     manual_start_on_env: "qas"
+
+  # Owasp-Zap:
+  #   needs:
+  #     ["Start-QAS"]
+  #   uses: PTTGC-DevSecOps/global-pipeline/.github/workflows/DAST_Owasp_Zap.yml@main
+  #   with:
+  #     allow_failure: ${{ fromJSON(VARS.ALLOW_FAILURE_DAST_OWASP_ZAP) }}
+    #   runs_on_host: GRP-COVERIT-P02
+    #   hostname: ${{ VARS.QAS_HOSTNAME }}
+    #   protocol: ${{ VARS.QAS_PROTOCOL == null && 'https' || VARS.QAS_PROTOCOL }}
+    # secrets: inherit
